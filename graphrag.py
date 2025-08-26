@@ -8,7 +8,7 @@ from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
 import uuid
 import os
 
-# Load environment variables
+# Load environment variables once
 load_dotenv()
 
 # Get credentials from environment variables
@@ -22,14 +22,9 @@ openrouter_url = os.getenv("OPENROUTER_URL")
 embeddingllm_key = os.getenv("EMBEDDING_API_KEY")
 embeddingllm_url = os.getenv("EMBEDDING_URL")
 
-# Initialize Neo4j driver
+# Initialize clients once from env
 neo4j_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
-
-# Initialize Qdrant client
-qdrant_client = QdrantClient(
-    url=qdrant_url,
-    api_key=qdrant_key
-)
+qdrant_client = QdrantClient(url=qdrant_url, api_key=qdrant_key)
 
 class single(BaseModel):
     node: str
@@ -113,12 +108,12 @@ def extract_graph_components(raw_data):
 
     return nodes, relationships
 
-def ingest_to_neo4j(nodes, relationships):
+def ingest_to_neo4j(nodes, relationships, driver):
     """
     Ingest nodes and relationships into Neo4j.
     """
 
-    with neo4j_driver.session() as session:
+    with driver.session() as session:
         # Create nodes in Neo4j
         for name, node_id in nodes.items():
             session.run(
@@ -166,10 +161,10 @@ def openai_embeddings(text):
     
     return response.data[0].embedding
 
-def ingest_to_qdrant(collection_name, raw_data, node_id_mapping):
+def ingest_to_qdrant(collection_name, raw_data, node_id_mapping, client):
     embeddings = [openai_embeddings(paragraph) for paragraph in raw_data.split("\n")]
 
-    qdrant_client.upsert(
+    client.upsert(
         collection_name=collection_name,
         points=[
             {
@@ -267,17 +262,7 @@ def graphRAG_run(graph_context, user_query):
     
 if __name__ == "__main__":
     print("Script started")
-    print("Loading environment variables...")
-    load_dotenv('.env.local')
-    print("Environment variables loaded")
-    
-    print("Initializing clients...")
-    neo4j_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
-    qdrant_client = QdrantClient(
-        url=qdrant_url,
-        api_key=qdrant_key
-    )
-    print("Clients initialized")
+    # Clients were initialized at import time using NEO4J_URI and other envs
     
     print("Creating collection...")
     collection_name = "graphRAGstoreds"
@@ -318,11 +303,11 @@ if __name__ == "__main__":
     print("Relationships:", relationships)
     
     print("Ingesting to Neo4j...")
-    node_id_mapping = ingest_to_neo4j(nodes, relationships)
+    node_id_mapping = ingest_to_neo4j(nodes, relationships, neo4j_driver)
     print("Neo4j ingestion complete")
     
     print("Ingesting to Qdrant...")
-    ingest_to_qdrant(collection_name, raw_data, node_id_mapping)
+    ingest_to_qdrant(collection_name, raw_data, node_id_mapping, qdrant_client)
     print("Qdrant ingestion complete")
 
     query = "How is Bob connected to New York?"
