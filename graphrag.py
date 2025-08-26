@@ -17,7 +17,10 @@ qdrant_url = os.getenv("QDRANT_URL")
 neo4j_uri = os.getenv("NEO4J_URI")
 neo4j_username = os.getenv("NEO4J_USERNAME")
 neo4j_password = os.getenv("NEO4J_PASSWORD")
-openai_key = os.getenv("OPENAI_API_KEY")
+openrouter_key = os.getenv("OPENROUTER_API_KEY")
+openrouter_url = os.getenv("OPENROUTER_URL")
+embeddingllm_key = os.getenv("EMBEDDING_API_KEY")
+embeddingllm_url = os.getenv("EMBEDDING_URL")
 
 # Initialize Neo4j driver
 neo4j_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
@@ -36,7 +39,15 @@ class single(BaseModel):
 class GraphComponents(BaseModel):
     graph: list[single]
 
-client = OpenAI()
+client = OpenAI(
+    base_url=openrouter_url,
+    api_key=openrouter_key,
+)
+
+clientEmb = OpenAI(
+    base_url=embeddingllm_url,
+    api_key=embeddingllm_key,
+)
 
 def openai_llm_parser(prompt):
     completion = client.chat.completions.create(
@@ -148,7 +159,7 @@ def create_collection(client, collection_name, vector_dimension):
             print(f"Error while checking collection: {e}")
 
 def openai_embeddings(text):
-    response = client.embeddings.create(
+    response = clientEmb.embeddings.create(
         input=text,
         model="text-embedding-3-small"
     )
