@@ -1,6 +1,13 @@
 {
-  "name": "graphrag-bun",
+  "name": "graphrag",
   "version": "0.1.0",
+  "description": "Build a GraphRAG agent with Neo4j and Qdrant for Node.js",
+  "author": "alexy-os",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexy-os/graphrag.git"
+  },
   "private": true,
   "type": "module",
   "scripts": {
